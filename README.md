@@ -5,7 +5,7 @@
 <img src="Figure1-AnolePhotos-01.png" class="inline">
 </figure>
 
-<h6>This repository holds the data and scripts associated with Patton et al. 2021 - *When adaptive radiations collide: different evolutionary trajectories between and within island and mainland lizard clades*, published in PNAS.6</h6>
+This repository holds the data and scripts associated with Patton et al. 2021 - *When adaptive radiations collide: different evolutionary trajectories between and within island and mainland lizard clades*, published in PNAS.
 
 
 **Abstract:**
