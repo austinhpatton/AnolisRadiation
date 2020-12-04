@@ -2,7 +2,7 @@
 Austin H. Patton, Luke J. Harmon, María del Rosario Castañeda, Hannah K. Frank, Colin M. Donihue, Anthony Herrel, Jonathan B. Losos
 
 <figure style="width: 350px" class="wrap align-left">
-<img src="Figure1.png" class="inline">
+<img src="Figure1-AnolePhotos-01.png" class="inline">
 </figure>
 This repository holds the data and scripts associated with Patton et al. 2021 - "When adaptive radiations collide: different evolutionary trajectories between and within island and mainland lizard clades", published in PNAS
 
