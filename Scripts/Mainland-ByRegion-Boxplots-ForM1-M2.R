@@ -59,7 +59,7 @@ m2.eco <- m.data[which(m.data$Group == 'M2'),c(1,42:45)]
 # get regions 
 m2.regs <- m.data[which(m.data$Group == 'M2'),c(1,26:41)]
 
-m2.uca.spp <- as.character(m2.regs$Species[which(rowSums(m2.regs[,2:3]) != 0)])
+m2.uca.spp <- as.character(m2.regs$Species[which(rowSums(m2.regs[,3:4]) != 0)])
 m2.lca.spp <- as.character(m2.regs$Species[which(m2.regs$Lower.Central.America == 1)])
 m2.sa.spp <- as.character(m2.regs$Species[which(m2.regs$SouthAmerica == 1)])
 
@@ -123,6 +123,36 @@ svl.p <-
         legend.position = "none") +
   ylab('Ln(SVL)')
 
+# simple test of ecological filtering - are the lower CA M1 species larger on 
+# average than would be expected from a random sample?
+obs <- mean(na.omit(m1m2.dat$SVL[which(m1m2.dat$Group == 'M1-LowerCA')]))
+m1.sa.dat <- c(na.omit(m1m2.dat[which(m1m2.dat$Group == 'M1-SouthAmerica'), 'SVL']))
+exp <- c()
+for(i in 1:1000){
+  exp[i] <- mean(sample(x = m1.sa.dat, size = 4, replace = F))
+}
+p <- 1-(sum(obs > exp)/1000)
+exp <- data.frame('Expected' = exp)
+probs <- c(0, 0.025, 0.5, 0.975, 1)
+quantiles <- quantile(exp$Expected, prob=probs)
+dens <- density(exp$Expected)
+dens <- data.frame('Expected' = dens$x, 
+                   'Density' = dens$y)
+dens$quant <- factor(findInterval(dens$Expected, quantiles))
+
+ecol.filt.p <- 
+  ggplot(data = dens, aes(x = Expected, y = Density, fill = quant)) + 
+  geom_ribbon(aes(ymin=0, ymax=Density, fill=quant), 
+              outline.type = 'lower', color = 'black') + 
+  scale_fill_brewer(guide="none") +
+  geom_vline(xintercept = obs, color = 'red', lty = 2) +
+  annotate(geom = 'text', label = paste0('p = ', round(p, 3)), 
+           y = max(dens$Density), x = min(dens$Expected), hjust = 0,
+           size = 6) + 
+  theme_bw(base_size = 16) + 
+  xlab('Expected SVL')
+  
+ggsave(ecol.filt.p, filename = 'ObsVsExp-LowerCA-M1-SVL.pdf')
 
 x <- rownames(ltrs$LetterMatrix)
 y <- graphics::boxplot(data = m1m2.dat, SVL ~ Group, plot = FALSE)$stats[5, ]
@@ -507,50 +537,3 @@ pdf('Habitat-Use-Mainland-ByRegion-Males.pdf', width = 10, height = 7)
 plot_grid(eco.main.p, legend, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 
-
-
-
-
-
-
-
-
-
-
-
-
-pdf('M1-M2_UCA-LCA-SA_NoSVL.pdf', width = 10)
-ggplot(data = m1m2.dat.no.svl, aes(x = Group, y = value, fill = Group)) +
-  geom_boxplot(outlier.colour = NA) + 
-  geom_point(position = position_jitterdodge(), pch = 21, size = 2, stroke = 1) +
-  facet_wrap(vars(variable)) +
-  stat_compare_means(comparisons = comparisons,
-                     label.y = c(seq(from = 0.5, by = 0.1, length.out = 10)),
-                     method='t.test',
-                     size = 3) +
-  #scale_fill_manual(values=c('#add8a4', "#b2182b")) +
-  theme_bw(base_size = 12) +
-  theme(axis.text.x=element_blank(), 
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        legend.position = "bottom") +
-  ylab('Value')
-dev.off()
-
-pdf('M1-M2_UCA-LCA-SA_Ecol-Perched.pdf', width = 10)
-ggplot(data = m1m2.dat.eco, aes(x = Group, y = value, fill = Group)) +
-  geom_boxplot(outlier.colour = NA) + 
-  geom_point(position = position_jitterdodge(), pch = 21, size = 2, stroke = 1) +
-  facet_wrap(vars(variable)) +
-  stat_compare_means(comparisons = comparisons,
-                     label.y = c(seq(from = 3.5, by = 0.35, length.out = 10)),
-                     method='t.test',
-                     size = 3) +
-  #scale_fill_manual(values=c('#add8a4', "#b2182b")) +
-  theme_bw(base_size = 12) +
-  theme(axis.text.x=element_blank(), 
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        legend.position = "bottom") +
-  ylab('Value')
-dev.off()
