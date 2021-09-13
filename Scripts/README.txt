@@ -5,6 +5,7 @@ This directory holds essential scripts.
 - ConvergenceDivergence-Mainland.R runs a similar to analysis, but with a focus on mainland groups (Figure 6A).
 - ConvergenceDivergenceFunctions.R - includes the functions sourced by the above two scripts to perform convergence analyses. 
 - EcomorphologicalANCOVAs.R - performs phylogenetic ancovas (Figure 4A-E).
+- glsANCOVA.R is a function that performs a phylogenitc ancova, and is sourced by EcomorphologicalANCOVAs.R
 - HiSSE-Analysis.R - performs HiSSE analyses assuming empirical sampling fractions (Figures 2B, S18, Tables S5-S6).
 - HiSSE-Analysis-Assume70perc.R - same as above, but assuming we have undersampled extant mainland diversity (Figure S19). 
 - Mainland-ByRegion-Boxplots-ForM1-M2.R - runs the simple comparisons to test for differences among mainland regions in body size (Figure S15).
