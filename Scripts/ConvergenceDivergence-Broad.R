@@ -65,9 +65,7 @@ write.table(model.comp, file = 'TraitEvolution-ModelComp.txt', sep = '\t')
 ######### Simulate Trait Data and Calculte PSTD ##########
 m.full <- m.full.td$phy
 
-
 bm.sim.m <- mvSIM(m.full, nsim = 20000, model = 'BM1', param = mv.bm.m)
-
 
 saveRDS(object = bm.sim.m, file = 'mvBM-Sim-Males.rds')
 
@@ -80,8 +78,8 @@ m.traitDists <- GetTraitDists(sims = bm.sim.m, obs = m.full.data)
 
 m.pstd <- GetPSTD(m.traitDists) 
 
-write.csv(m.pstd$mean, 'Male_mvBM_PSTD_Mean_Values.csv')
-# write.csv(m.pstd$median, 'Male_mvBM_PSTD_Median_Values.csv')
+write.csv(m.pstd$mean, 'Male_mvBM-Final_PSTD_Mean_Values.csv')
+write.csv(m.pstd$median, 'Male_mvBM-Final_PSTD_Median_Values.csv')
 
 # saveRDS(m.pstd, 'Male_mvBM_PSTD.rds')
 # 
@@ -101,7 +99,7 @@ spp.regions <- data.frame('Species' = spp, 'Region' = regions)
 
 spp.regions.m <- spp.regions[which(spp.regions$Species %in% m.full$tip.label),]
 
-m.pstd <- readRDS('Male_mvBM_PSTD.rds')
+m.pstd <- readRDS('Male_mvBM-Final_PSTD.rds')
 
 # Now prepare to identify actual convergent/divergent
 # species pairs. We will correspond PSTD values and species
@@ -109,19 +107,19 @@ m.pstd <- readRDS('Male_mvBM_PSTD.rds')
 
 m.pstd.results <- PreparePSTD(pstd = m.pstd, spp.cats = spp.regions.m)
 
-m.percentile <- ecdf(x = m.pstd.results$median$PSTD)
+m.percentile <- ecdf(x = m.pstd.results$mean$PSTD)
 
 m.quantiles <- c()
 
-for(i in 1:length(m.pstd.results$median$PSTD)){
-  x <- m.pstd.results$median$PSTD[i]
+for(i in 1:length(m.pstd.results$mean$PSTD)){
+  x <- m.pstd.results$mean$PSTD[i]
   m.quantiles[i] <- m.percentile(x)
 }
 
-m.pstd.results$median$Quantile <- m.quantiles
+m.pstd.results$mean$Quantile <- m.quantiles
 
-m.bott5.pstd <- m.pstd.results$median[which(m.pstd.results$median$Quantile <= 0.05),]
-m.top5.pstd <- m.pstd.results$median[which(m.pstd.results$median$Quantile >= 0.95),]
+m.bott5.pstd <- m.pstd.results$mean[which(m.pstd.results$mean$Quantile <= 0.05),]
+m.top5.pstd <- m.pstd.results$mean[which(m.pstd.results$mean$Quantile >= 0.95),]
 
 write.table(m.bott5.pstd, 'Male_Bottom5percent_PSTD.txt', sep = '\t', row.names = F, quote = F)
 write.table(m.top5.pstd, 'Male_Top5percent_PSTD.txt', sep = '\t', row.names = F, quote = F)
@@ -129,8 +127,8 @@ write.table(m.top5.pstd, 'Male_Top5percent_PSTD.txt', sep = '\t', row.names = F,
 # And now get your convergent and divergent taxa
 m.bott <- GetConvergent(pstd.dists = m.pstd.results, 
                         threshold = 0.01, 
-                        tree = tree, minDist = 20,
-                        dist.type = 'PatristicDist')
+                        tree = tree, minPatrDist = 20,
+                        minNodeDist = 2)
 m.top <- GetDivergent(pstd.dists = m.pstd.results, 
                       threshold = 0.01, 
                       tree = tree)
@@ -138,25 +136,25 @@ m.top <- GetDivergent(pstd.dists = m.pstd.results,
 #Test for abundance of convergences among allopatric vs sympatric species.
 setwd('~/Dropbox/Research/Anole_Diversification/FinalAnalyses/Convergence/')
 
-m.pstd <- readRDS('Male_mvBM_PSTD.rds')
+m.pstd <- readRDS('Male_mvBM-Final_PSTD.rds')
 m.pstd.results <- PreparePSTD(pstd = m.pstd, spp.cats = spp.regions.m)
 
 m.pstd.all <- GetConvergent(pstd.dists = m.pstd.results, 
                             threshold = 1, 
-                            tree = tree, minDist = 0,
-                            dist.type = 'PatristicDist')
+                            tree = tree, minPatrDist = 0,
+                            minNodeDist = 0)
 
 
 m.m1.pstd <- 
-  m.pstd.all$median[which(m.pstd.all$median$Spp1.Category == 'M1' &
-                            m.pstd.all$median$Spp2.Category == 'M1' ),]
+  m.pstd.all$mean[which(m.pstd.all$mean$Spp1.Category == 'M1' &
+                            m.pstd.all$mean$Spp2.Category == 'M1' ),]
 m.m2.pstd <- 
-  m.pstd.all$median[which(m.pstd.all$median$Spp2.Category == 'M2' &
-                            m.pstd.all$median$Spp2.Category == 'M2' ),]
+  m.pstd.all$mean[which(m.pstd.all$mean$Spp2.Category == 'M2' &
+                            m.pstd.all$mean$Spp2.Category == 'M2' ),]
 
 m.i2.pstd <- 
-  m.pstd.all$median[which(m.pstd.all$median$Spp2.Category == 'I2' &
-                            m.pstd.all$median$Spp2.Category == 'I2' ),]
+  m.pstd.all$mean[which(m.pstd.all$mean$Spp2.Category == 'I2' &
+                            m.pstd.all$mean$Spp2.Category == 'I2' ),]
 
 m.m1.pstd$Within <- rep('M1', nrow(m.m1.pstd))
 m.m2.pstd$Within <- rep('M2', nrow(m.m2.pstd))
@@ -222,7 +220,7 @@ for(i in 1:nrow(mainland.conv.pstd)){
 
 # Determine if spp1 is sympatric with spp2
 reg.occup <- read.csv('../FinalData/PoeDat_AP.csv', header = T) %>% .[,-c(2:6,14:21)]
-
+mland.spp <- spp.regions.m[which(spp.regions.m$Region %in% c('M1', 'M2')),]
 mland.patry <- merge(mland.spp, reg.occup, by = 'Species')
 rownames(mland.patry) <- mland.patry$Species
 mland.patry <- mland.patry[,-1]
@@ -256,7 +254,7 @@ for(i in 1:nrow(mainland.conv.pstd)){
 
 # Look for all - island/mainland
 
-spp.dists <- read.csv('FinalData/PoeDat_AP.csv')
+spp.dists <- read.csv('../FinalData/PoeDat_AP.csv')
 spp.dists <- spp.dists[which(spp.dists$Species %in% c(i2$tip.label, m2$tip.label)),]
 
 # Reduce down to only those species involved in convergences
@@ -279,7 +277,7 @@ uca <- as.character(spp.dists[which(spp.dists$UpperCentralAmerica == 1),1])
 GrAntil <- c(baham, cuba, hisp, jama, pr)
 
 
-m.conv <- read.csv('Male_mvBM_Median_Convergences.csv')
+m.conv <- read.csv('Male_mvBM_Mean_Convergences.csv')
 m.conv$Patry <- NA
 for(i in 1:nrow(m.conv)){
   # go down the list of PSTD and test if the two species share a region. 
@@ -300,11 +298,11 @@ for(i in 1:nrow(m.conv)){
     ifelse(symp == 0, 'Allopatric', 'Sympatric')
 }
 
-m.pstd.results$median$Patry <- NA
-for(i in 1:nrow(m.pstd.results$median)){
+m.pstd.results$mean$Patry <- NA
+for(i in 1:nrow(m.pstd.results$mean)){
   # go down the list of PSTD and test if the two species share a region. 
-  spp1 <- m.pstd.results$median$Spp1[i]
-  spp2 <- m.pstd.results$median$Spp2[i]
+  spp1 <- m.pstd.results$mean$Spp1[i]
+  spp2 <- m.pstd.results$mean$Spp2[i]
   
   symp <- 
     sum(spp1 %in% nearctic & spp2 %in% nearctic, 
@@ -321,16 +319,16 @@ for(i in 1:nrow(m.pstd.results$median)){
         spp1 %in% pr & spp2 %in% pr,
         spp1 %in% smIsl & spp2 %in% smIsl)
   
-  m.pstd.results$median$Patry[i] <- 
+  m.pstd.results$mean$Patry[i] <- 
     ifelse(symp == 0, 'Allopatric', 'Sympatric')
 }
 
-i2.pstd.results <- m.pstd.results$median[which(m.pstd.results$median$Spp1.Category == 'I2' & 
-                                           m.pstd.results$median$Spp2.Category == 'I2'),]
-m1.pstd.results <- m.pstd.results$median[which(m.pstd.results$median$Spp1.Category == 'M1' & 
-                                           m.pstd.results$median$Spp2.Category == 'M1'),]
-m2.pstd.results <- m.pstd.results$median[which(m.pstd.results$median$Spp1.Category == 'M2' & 
-                                           m.pstd.results$median$Spp2.Category == 'M2'),]
+i2.pstd.results <- m.pstd.results$mean[which(m.pstd.results$mean$Spp1.Category == 'I2' & 
+                                           m.pstd.results$mean$Spp2.Category == 'I2'),]
+m1.pstd.results <- m.pstd.results$mean[which(m.pstd.results$mean$Spp1.Category == 'M1' & 
+                                           m.pstd.results$mean$Spp2.Category == 'M1'),]
+m2.pstd.results <- m.pstd.results$mean[which(m.pstd.results$mean$Spp1.Category == 'M2' & 
+                                           m.pstd.results$mean$Spp2.Category == 'M2'),]
 
 expected.allo <- c(sum(i2.pstd.results$Patry == 'Allopatric'), 
                    sum(m2.pstd.results$Patry == 'Allopatric'))
@@ -346,7 +344,7 @@ expected.prop.patry <- expected.allo / expected.symp
 expected.probs.patry <- expected.prob.allo / expected.prob.symp
 
   
-#m.conv <- read.csv('Male_mvBM_Median_Convergences.csv')
+#m.conv <- read.csv('Male_mvBM_Mean_Convergences.csv')
 
 obs.allo <- c(sum(m.conv[which(m.conv$Spp1.Category == 'I2' &
                                  m.conv$Spp2.Category == 'I2'),]$Patry == 'Allopatric'), 
@@ -424,7 +422,7 @@ pstd.patrist.ratio.patry <-
   theme_bw()
 
 
-sig.conv.patry.pstd <- read.csv('./Convergence/Male_mvBM_Median_Convergences.csv')
+sig.conv.patry.pstd <- read.csv('Male_mvBM-Final_Mean_Convergences.csv')
 
 sig.conv.patry.pstd$Patry <- NA
 for(i in 1:nrow(sig.conv.patry.pstd)){
@@ -596,14 +594,14 @@ ggplot() +
 # Now plot the distances among convergent taxa to get a sense of how 
 # robust results are to stasis. 
 
-pdf('ConvergenceDistances_MedianPSTD_BestMods.pdf', width = 10, height = 6)
+pdf('ConvergenceDistances_MeanPSTD_BestMods.pdf', width = 10, height = 6)
 par(mfrow = c(1,2))
-hist(m.bott$median$PatristicDist, breaks = 10, xlab = 'Patristic Distance Among Male Convergence', main = '')
-hist(m.bott$median$NodeDist, breaks = 20, xlim=c(0,35), xlab = '# Intervening Nodes Among Male Convergence', main = '')
+hist(m.bott$mean$PatristicDist, breaks = 10, xlab = 'Patristic Distance Among Male Convergence', main = '')
+hist(m.bott$mean$NodeDist, breaks = 20, xlim=c(0,35), xlab = '# Intervening Nodes Among Male Convergence', main = '')
 dev.off()
 
-write.csv(m.top$median, 'Male_mvBM_Median_Divergences.csv', row.names = F)
-write.csv(m.bott$median, 'Male_mvBM_Median_Convergences.csv', row.names = F)
+write.csv(m.top$mean, 'Male_mvBM_Mean_Divergences.csv', row.names = F)
+write.csv(m.bott$mean, 'Male_mvBM_Mean_Convergences.csv', row.names = F)
 
 # Calculate proportion of prevalences in extremes
 library(dplyr)
@@ -618,8 +616,8 @@ capture.output(m.summs, file = 'ConvDiv_mvBM_ByGroup_Scaled_Males.txt')
 library(ggplot2)
 library(plotrix)
 
-pdf('ConvDiv_mvBM-Median_ByGroup_Scaled_Males.pdf', width=7, height=6)
-ggplot(data = m.summs$median, aes(x = Category, y = ObsOverExpPrev)) + 
+pdf('ConvDiv_mvBM-Mean_ByGroup_Scaled_Males.pdf', width=7, height=6)
+ggplot(data = m.summs$mean, aes(x = Category, y = ObsOverExpPrev)) + 
   geom_bar(stat = "identity", aes(fill = Type), 
            position=position_dodge()) + 
   scale_fill_manual(values = c('#67a9cf', '#ef8a62')) +
@@ -639,11 +637,11 @@ library(stringr)
 # we need to account for this. Likewise, we need to define factor 
 # levels for the pairs
 
-pair.types <- list(c('I1--I2', 'I2--I1'), c('I1--M1', 'M1--I1'), 
-                   c('I1--M2', 'M2--I1'), c('I2--M2', 'M2--I2'), 
-                   c('M1--I2', 'I2--M1'), c('M1--M2', 'M2--M1'))
-pair.levels <- c('I1--I1', 'I2--I1', 'M1--I1', 'M2--I1', 'I2--I2',
-                 'M2--I2', 'I2--M1', 'M1--M1', 'M2--M1', 'M2--M2')
+pair.types <- list(c('I1-I2', 'I2-I1'), c('I1-M1', 'M1-I1'), 
+                   c('I1-M2', 'M2-I1'), c('I2-M2', 'M2-I2'), 
+                   c('M1-I2', 'I2-M1'), c('M1-M2', 'M2-M1'))
+pair.levels <- c('I1-I1', 'I2-I1', 'M1-I1', 'M2-I1', 'I2-I2',
+                 'M2-I2', 'I2-M1', 'M1-M1', 'M2-M1', 'M2-M2')
 
 
 m.heat <-
@@ -654,7 +652,7 @@ m.heat <-
                  threshold = 0.01)
 
 # Prop Test for M2 and I2
-m.heat <- readRDS(file = 'PairwiseConvDiv-Males-Broad.rds')
+#m.heat <- readRDS(file = 'PairwiseConvDiv-Males-Broad.rds')
 m2.succ <- m.heat$Observed$ConvMed[10]
 i2.succ <- m.heat$Observed$ConvMed[5]
 m2.fail <- sum(m.heat$Observed$ConvMed)-m2.succ
@@ -668,63 +666,115 @@ m.heat$ObsExp[4,c(15,16)] <- c('M1', 'I2')
 saveRDS(m.heat, file = 'PairwiseConvDiv-Males-Broad.rds')
 capture.output(m.heat, file = 'PairwiseConvDiv-Males-Broad.txt')
 
-pdf('Male_Convergences-Median_Heatmap.pdf', width = 7, height = 7)
+pdf('Male_Convergences-Mean_Heatmap.pdf', width = 7, height = 7)
 ggplot(data = m.heat$ObsExp, aes(x = Region1, y = Region2, 
-                          fill = log(ConvMed.ObsExpFreqs))) +
+                          fill = log(ConvMean.ObsExpFreqs))) +
   geom_tile() +
-  scale_fill_distiller(type = 'div', palette = 7, limits = c(-1.5, 1.5)) +
+  scale_fill_distiller(type = 'div', palette = 7, limits = c(-2.5, 1.5)) +
   guides(fill=guide_legend(title="log(Obs/Exp Convergences)")) +
   theme_bw()  +
   theme(legend.position = c(0.025, 0.975), 
         legend.justification = c(0, 1)) 
 dev.off()
 
-pdf('Male_Divergences-Median_Heatmap.pdf', width = 7, height = 7)
+########
+# Now, relaxing to 2.5%
+m.bott <- GetConvergent(pstd.dists = m.pstd.results, 
+                        threshold = 0.025, 
+                        tree = tree, minPatrDist = 20,
+                        minNodeDist = 2)
+m.heat <-
+  PrepareHeatmap(Convergent = m.bott, Divergent = m.top,
+                 pstdResults = m.pstd.results, 
+                 pair.types = pair.types,
+                 pair.levels = pair.levels,
+                 threshold = 0.025)
+
+# Rearrange slightly for plotting
+m.heat$ObsExp[4,c(15,16)] <- c('M1', 'I2')
+
+saveRDS(m.heat, file = 'PairwiseConvDiv-0.025-Males-Broad.rds')
+capture.output(m.heat, file = 'PairwiseConvDiv-0.025-Males-Broad.txt')
+
+pdf('Male_Convergences-Mean_0.025-Heatmap.pdf', width = 7, height = 7)
 ggplot(data = m.heat$ObsExp, aes(x = Region1, y = Region2, 
-                                 fill = log(DivMed.ObsExpFreqs))) +
+                                 fill = log(ConvMean.ObsExpFreqs))) +
   geom_tile() +
-  scale_fill_distiller(type = 'div', palette = 7, limits = c(-3, 3)) +
-  guides(fill=guide_legend(title="log(Obs/Exp Divergences)")) +
+  scale_fill_distiller(type = 'div', palette = 7, limits = c(-2, 2)) +
+  guides(fill=guide_legend(title="log(Obs/Exp Convergences)")) +
   theme_bw()  +
   theme(legend.position = c(0.025, 0.975), 
         legend.justification = c(0, 1)) 
 dev.off()
-# 
+
+########
+# Now, relaxing to 2.5%
+m.bott <- GetConvergent(pstd.dists = m.pstd.results, 
+                        threshold = 0.05, 
+                        tree = tree, minPatrDist = 20,
+                        minNodeDist = 2)
+m.heat <-
+  PrepareHeatmap(Convergent = m.bott, Divergent = m.top,
+                 pstdResults = m.pstd.results, 
+                 pair.types = pair.types,
+                 pair.levels = pair.levels,
+                 threshold = 0.05)
+
+# Rearrange slightly for plotting
+m.heat$ObsExp[4,c(15,16)] <- c('M1', 'I2')
+
+saveRDS(m.heat, file = 'PairwiseConvDiv-0.05-Males-Broad.rds')
+capture.output(m.heat, file = 'PairwiseConvDiv-0.05-Males-Broad.txt')
+
+pdf('Male_Convergences-Mean_0.05-Heatmap.pdf', width = 7, height = 7)
+ggplot(data = m.heat$ObsExp, aes(x = Region1, y = Region2, 
+                                 fill = log(ConvMean.ObsExpFreqs))) +
+  geom_tile() +
+  scale_fill_distiller(type = 'div', palette = 7, limits = c(-2, 2)) +
+  guides(fill=guide_legend(title="log(Obs/Exp Convergences)")) +
+  theme_bw()  +
+  theme(legend.position = c(0.025, 0.975), 
+        legend.justification = c(0, 1)) 
+dev.off()
 
 ######### Co-Phylo showing convergences ######### 
+m.bott <- GetConvergent(pstd.dists = m.pstd.results, 
+                        threshold = 0.01, 
+                        tree = tree, minPatrDist = 20,
+                        minNodeDist = 2)
 
-m.bott$median[,1] <- as.character(m.bott$median[,1])
-m.bott$median[,2] <- as.character(m.bott$median[,2])
-for(i in 1:nrow(m.bott$median)){
+m.bott$mean[,1] <- as.character(m.bott$mean[,1])
+m.bott$mean[,2] <- as.character(m.bott$mean[,2])
+for(i in 1:nrow(m.bott$mean)){
   if(i %% 2 == 0){
-    a <- as.character(m.bott$median[i,1])
-    b <- as.character(m.bott$median[i,2])
-    m.bott$median[i,1] <- b
-    m.bott$median[i,2] <- a 
+    a <- as.character(m.bott$mean[i,1])
+    b <- as.character(m.bott$mean[i,2])
+    m.bott$mean[i,1] <- b
+    m.bott$mean[i,2] <- a 
   } else {
-    m.bott$median[i,1] <- as.character(m.bott$median[i,1])
-    m.bott$median[i,2] <- as.character(m.bott$median[i,2])
+    m.bott$mean[i,1] <- as.character(m.bott$mean[i,1])
+    m.bott$mean[i,2] <- as.character(m.bott$mean[i,2])
   }
 }
 
-conv.trees <- cophylo(m.full.td$phy, m.full.td$phy, assoc = m.bott$median[,1:2], 
+conv.trees <- cophylo(m.full.td$phy, m.full.td$phy, assoc = m.bott$mean[,1:2], 
                       rotate = F)
-pdf('Convergence-mvBM-0.5_CoPhylo-Males.pdf', width=13, height=7)
+pdf('Convergence-mvBM-0.1_CoPhylo-Males.pdf', width=13, height=7)
 plot.cophylo(conv.trees, fsize = 0.4, link.lwd = 1, link.col='darkgrey', node.size = 0)
 dev.off()
 
 
 
 # Now define edge widths
-m.top$median$pair <- as.factor(paste(m.top$median$Spp1.Category, m.top$median$Spp2.Category, sep = "-"))
-m.bott$median$pair <- as.factor(paste(m.bott$median$Spp1.Category, m.bott$median$Spp2.Category, sep = "-"))
+m.top$mean$pair <- as.factor(paste(m.top$mean$Spp1.Category, m.top$mean$Spp2.Category, sep = "-"))
+m.bott$mean$pair <- as.factor(paste(m.bott$mean$Spp1.Category, m.bott$mean$Spp2.Category, sep = "-"))
 
-m.bott$median$spp.pair <- as.factor(paste(m.bott$median$Spp1, m.bott$median$Spp2, sep = "-"))
+m.bott$mean$spp.pair <- as.factor(paste(m.bott$mean$Spp1, m.bott$mean$Spp2, sep = "-"))
 
-m.top.pair.counts <- count(m.top$median$pair)
-m.bott.pair.counts <- count(m.bott$median$pair)
+m.top.pair.counts <- count(m.top$mean$pair)
+m.bott.pair.counts <- count(m.bott$mean$pair)
 
-m.bott.spp.pair.counts <- count(m.bott$median$spp.pair)
+m.bott.spp.pair.counts <- count(m.bott$mean$spp.pair)
 
 m.top.pair.counts <- separate(m.top.pair.counts, x, c('from', 'to'), sep = '-')
 m.bott.pair.counts <- separate(m.bott.pair.counts, x, c('from', 'to'), sep = '-')
@@ -759,10 +809,10 @@ m.bott.pair.counts$weight <- ifelse(m.bott.pair.counts$Group1.Rich != m.bott.pai
                                     (m.bott.pair.counts$freq / (m.bott.pair.counts$Group1.Rich * m.bott.pair.counts$Group2.Rich)),
                                     (m.bott.pair.counts$freq / m.bott.pair.counts$Group1.Rich))
 
-m.div.net <- graph_from_data_frame(d = m.top$median[,c(4:5,3)], directed = F)
-m.cov.net <- graph_from_data_frame(d = m.bott$median[,c(6:7,3)], directed = F)
+m.div.net <- graph_from_data_frame(d = m.top$mean[,c(4:5,3)], directed = F)
+m.cov.net <- graph_from_data_frame(d = m.bott$mean[,c(6:7,3)], directed = F)
 
-m.cov.spp.net <- graph_from_data_frame(d = m.bott$median[,c(1:2,3)], directed = F)
+m.cov.spp.net <- graph_from_data_frame(d = m.bott$mean[,c(1:2,3)], directed = F)
 
 m.div.edges <- igraph::as_data_frame(m.div.net, what="edges")
 m.div.links <- m.top.pair.counts[,c(1,2,3)]
@@ -818,6 +868,4 @@ plot(m.div.net, edge.curved=0.2,
      edge.color = E(m.div.net)$color,
      vertex.size=20, vertex.label.color="black") 
 dev.off()
-
-
 
