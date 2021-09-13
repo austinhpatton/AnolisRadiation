@@ -14,7 +14,9 @@
 
 GetTraitDists <- 
   function(sims = 'SimTraitList' , obs = 'EmpiricalTraits'){
-    sim.trait.arr <- array(unlist(sims), dim = c(nrow(sims[[1]]), ncol(sims[[1]]), length(sims)))
+    sim.trait.arr <- array(unlist(sims), dim = c(nrow(sims[[1]]), 
+                                                 ncol(sims[[1]]), 
+                                                 length(sims)))
     sim.trait.dists <- list()
     
     for(i in 1:length(sims)){
@@ -23,7 +25,7 @@ GetTraitDists <-
     }
     
     # Now, calculate observed pairwise distances of trait values. 
-    obs.dists <- as.matrix(dist(x = obs))
+    obs.dists <- as.matrix(dist(x = obs[,1:9]))
     
     # Now put together into list
     traitDists <- list('simulated' = sim.trait.dists, 
@@ -41,24 +43,25 @@ GetPSTD <-
     # Calculate the mean
     mean.dists <- apply(simplify2array(traitDists$simulated), 1:2, mean)
     
-    # Calculate the median
-    median.dists <- apply(simplify2array(traitDists$simulated), 1:2, median)
+    # Calculate the mean
+    mean.dists <- apply(simplify2array(traitDists$simulated), 1:2, mean)
     
     # Lastly the standard deviation
     sd.dists <- apply(simplify2array(traitDists$simulated), 1:2, sd)
     
     # Now, calculate observed pairwise distances of trait values. 
-    obs.dists <- as.matrix(dist(x = traitDists$observed))
+    # obs.dists <- as.matrix(dist(x = traitDists$observed))
+    obs.dists <- traitDists$observed
     
     # Now calculate the phylogenetically standardized trait distance
     # of Mazel et al. 2017 (PSTD)
     # (Dist Observed - mean(Dist Neutral))/StDev(Dist Neutral)
     pstd.mean <- (obs.dists - mean.dists)/sd.dists
     pstd.mean[upper.tri(pstd.mean, diag = T)] <- NA
-    pstd.median <- (obs.dists - median.dists)/sd.dists
-    pstd.median[upper.tri(pstd.median, diag = T)] <- NA
+    pstd.mean <- (obs.dists - mean.dists)/sd.dists
+    pstd.mean[upper.tri(pstd.mean, diag = T)] <- NA
     
-    pstd <- list('mean' = pstd.mean, 'median' = pstd.median)
+    pstd <- list('mean' = pstd.mean, 'mean' = pstd.mean)
     return(pstd)
   }
 
@@ -111,8 +114,7 @@ PreparePSTD <-
 # intervening putatively convergent taxa. 
 GetConvergent <-
   function(pstd.dists = 'PreparedPSTD', threshold = 'Quantile', 
-           tree = 'Phylogeny', minDist = 5,
-           dist.type = c('PatristicDist', 'NodeDist')){
+           tree = 'Phylogeny', minPatrDist = 5, minNodeDist = 2){
     bott <- list()
     
     # Get the distances here so you don't have to calculate it each time within the function
@@ -137,14 +139,14 @@ GetConvergent <-
       
       bott[[m]] <- pstd.dists[[m]][pstd.dists[[m]]$PSTD <= quantiles[[1]],]
       
-      print(paste0('There are ', nrow(bott[[m]]),
-                   ' putative convergences'))
-      
       bott[[m]] <- merge(dists, bott[[m]], by = c('Spp1', 'Spp2'))
       colnames(bott[[m]]) <- c('Spp1', 'Spp2', 'PatristicDist', 'NodeDist', 
                                'PSTD', 'Spp1.Category', 'Spp2.Category')
-      bott[[m]] <- bott[[m]][which(bott[[m]][[dist.type]] >= minDist),]
+      bott[[m]] <- bott[[m]][which(bott[[m]][['PatristicDist']] >= minPatrDist),]
+      bott[[m]] <- bott[[m]][which(bott[[m]][['NodeDist']] >= minNodeDist),]
       
+      print(paste0('There are ', nrow(bott[[m]]),
+                   ' putative convergences'))
     }
     return(bott)
   }
@@ -266,7 +268,8 @@ PrepareHeatmap <-
            pair.levels = 'PairLevels',
            distType = 'PatristicDist',
            threshold = 0.01,
-           maxDist = 20){
+           minNodeDist = 2,
+           minPatrDist = 20){
     
     # Get the distances here so you don't have to calculate it each time within the function
     patr.distances <- distTips(tree, tips = "all", method = c("patristic"), 
@@ -280,20 +283,22 @@ PrepareHeatmap <-
                                     colname = c("Spp1", "Spp2", "NodeDist"))
     dists <- cbind(patr.distances, node.distances$NodeDist)
     colnames(dists) <- c('Spp1', 'Spp2', 'PatristicDist', 'NodeDist')
+    dists <- dists[-which(dists$PatristicDist < minPatrDist),]
+    dists <- dists[-which(dists$NodeDist < minNodeDist),]
     
     for(m in ls(pstdResults)){
       Convergent[[m]]$pair <- 
         as.factor(paste(Convergent[[m]]$Spp1.Category, 
                         Convergent[[m]]$Spp2.Category, 
-                        sep = "--"))
+                        sep = "-"))
       Divergent[[m]]$pair <- 
         as.factor(paste(Divergent[[m]]$Spp1.Category, 
                         Divergent[[m]]$Spp2.Category, 
-                        sep = "--"))
+                        sep = "-"))
       pstdResults[[m]]$pair <- 
         as.factor(paste(pstdResults[[m]]$Spp1.Category, 
                         pstdResults[[m]]$Spp2.Category, 
-                        sep = "--"))
+                        sep = "-"))
       
       for(i in 1:length(pair.types)){
         Convergent[[m]]$pair <- as.factor(sub(pair.types[[i]][1], 
@@ -327,15 +332,15 @@ PrepareHeatmap <-
     
     Obs <- 
       data.frame('Pair' = pair.levels,
-                 'ConvMed' = summary(Convergent$median$pair),
-                 'ConvMedFreq' = (summary(Convergent$median$pair) / 
-                                    sum(summary(Convergent$median$pair))),
+                 'ConvMed' = summary(Convergent$mean$pair),
+                 'ConvMedFreq' = (summary(Convergent$mean$pair) / 
+                                    sum(summary(Convergent$mean$pair))),
                  'ConvMean' = summary(Convergent$mean$pair),
                  'ConvMeanFreq' = (summary(Convergent$mean$pair) / 
                                      sum(summary(Convergent$mean$pair))),
-                 'DivMed' = summary(Divergent$median$pair),
-                 'DivMedFreq' = (summary(Divergent$median$pair) / 
-                                   sum(summary(Divergent$median$pair))),
+                 'DivMed' = summary(Divergent$mean$pair),
+                 'DivMedFreq' = (summary(Divergent$mean$pair) / 
+                                   sum(summary(Divergent$mean$pair))),
                  'DivMean' = summary(Divergent$mean$pair),
                  'DivMeanFreq' = (summary(Divergent$mean$pair) / 
                                    sum(summary(Divergent$mean$pair)))
@@ -343,7 +348,7 @@ PrepareHeatmap <-
     
     Exp <- 
       data.frame(
-        # It doesn't matter whether mean or median is chosen - these are constants
+        # It doesn't matter whether mean or mean is chosen - these are constants
         # given your dataset 
         'Pair' = names(summary(pstdResults$mean$pair)),
         'ExpFreq' = pair.exp.freqs,
@@ -367,11 +372,11 @@ PrepareHeatmap <-
                  'DivMean.P' = rep(NA, length(Obs$Pair)))  
     
     for(i in 1:nrow(Obs)){
-      Binom[i,2] <- binom.test(x = Obs[i,2], n = nrow(Convergent$median), p = Exp[i,2], 
+      Binom[i,2] <- binom.test(x = Obs[i,2], n = nrow(Convergent$mean), p = Exp[i,2], 
                                alternative = 'two.sided')$p.value
       Binom[i,3] <- binom.test(x = Obs[i,4], n = nrow(Convergent$mean), p = Exp[i,2], 
                                alternative = 'two.sided')$p.value
-      Binom[i,4] <- binom.test(x = Obs[i,6], n = nrow(Divergent$median), p = Exp[i,2], 
+      Binom[i,4] <- binom.test(x = Obs[i,6], n = nrow(Divergent$mean), p = Exp[i,2], 
                                alternative = 'two.sided')$p.value
       Binom[i,5] <- binom.test(x = Obs[i,8], n = nrow(Divergent$mean), p = Exp[i,2], 
                                alternative = 'two.sided')$p.value
@@ -403,7 +408,7 @@ PrepareHeatmap <-
                         'Expected' = Exp,
                         'ObsExp' = ObsExp)
     
-    tmp <- unlist(strsplit(as.character(HeatmapData$ObsExp$Pair), split = '--'))
+    tmp <- unlist(strsplit(as.character(HeatmapData$ObsExp$Pair), split = '-'))
     
     HeatmapData$ObsExp$Region1 <- tmp[seq(from = 1, to = length(tmp)-1, by = 2)]
     HeatmapData$ObsExp$Region2 <- tmp[seq(from = 2, to = length(tmp), by = 2)]
